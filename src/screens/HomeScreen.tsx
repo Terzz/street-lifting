@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const handleStartDay = useCallback(
     (day: DayType) => {
       const existing = state.workouts[today]
-      if (!existing || (existing.completed && existing.day !== day)) {
+      if (!existing || existing.day !== day) {
         dispatch({ type: 'START_WORKOUT', day, date: today })
       }
       navigate(`/workout/${today}`)
