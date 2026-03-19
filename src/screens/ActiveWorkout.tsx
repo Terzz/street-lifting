@@ -1,10 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useCallback, useMemo } from 'react'
 import { useWorkout } from '../context/WorkoutContext'
 import { useTimer, unlockAudio } from '../hooks/useTimer'
-import { PROGRAM } from '../constants/program'
 import { DAY_COLORS } from '../constants/theme'
-import { getPreviousSetsForExercise } from '../lib/programLogic'
+import { getDayTemplate, getPreviousSession } from '../lib/programLogic'
 import Header from '../components/layout/Header'
 import WarmupBlock from '../components/workout/WarmupBlock'
 import ExerciseCard from '../components/workout/ExerciseCard'
@@ -18,7 +17,13 @@ export default function ActiveWorkout() {
   const timer = useTimer()
 
   const workout = date ? state.workouts[date] : null
-  const dayTemplate = workout ? PROGRAM.find((d) => d.id === workout.day) : null
+  const dayTemplate = workout ? getDayTemplate(workout.day) : null
+
+  // Compute previous session ONCE per render, not per exercise
+  const previousSession = useMemo(
+    () => (workout && date ? getPreviousSession(state, workout.day, date) : null),
+    [state.workouts, workout?.day, date]
+  )
 
   // Wake lock to keep screen on
   useEffect(() => {
@@ -32,6 +37,30 @@ export default function ActiveWorkout() {
     return () => { wakeLock?.release() }
   }, [])
 
+  const handleSetUpdate = useCallback(
+    (exerciseIndex: number, setIndex: number, field: 'reps' | 'weight' | 'done', value: number | boolean) => {
+      if (!date) return
+      dispatch({ type: 'UPDATE_SET', date, exerciseIndex, setIndex, field, value })
+    },
+    [date, dispatch]
+  )
+
+  const handleSetChecked = useCallback(
+    (exerciseIndex: number) => {
+      if (!workout) return
+      unlockAudio()
+      const exercise = workout.exercises[exerciseIndex]
+      timer.start(exercise.restSeconds)
+    },
+    [workout, timer]
+  )
+
+  const handleFinish = useCallback(() => {
+    if (!date) return
+    dispatch({ type: 'COMPLETE_WORKOUT', date })
+    navigate(`/summary/${date}`, { replace: true })
+  }, [date, dispatch, navigate])
+
   if (!date || !workout || !dayTemplate) {
     return (
       <div className="min-h-screen bg-bg">
@@ -43,19 +72,8 @@ export default function ActiveWorkout() {
     )
   }
 
-  const color = DAY_COLORS[workout.day as DayType]
+  const color = DAY_COLORS[workout.day]
   const allSetsDone = workout.exercises.every((e) => e.sets.every((s) => s.done))
-
-  const handleSetChecked = (exerciseIndex: number) => {
-    unlockAudio()
-    const exercise = workout.exercises[exerciseIndex]
-    timer.start(exercise.restSeconds)
-  }
-
-  const handleFinish = () => {
-    dispatch({ type: 'COMPLETE_WORKOUT', date })
-    navigate(`/summary/${date}`, { replace: true })
-  }
 
   return (
     <div className="min-h-screen bg-bg pb-32">
@@ -73,16 +91,14 @@ export default function ActiveWorkout() {
 
         {/* Exercises */}
         {workout.exercises.map((exercise, i) => {
-          const prevExercise = getPreviousSetsForExercise(state, workout.day, exercise.name, date)
+          const prevExercise = previousSession?.exercises.find((e) => e.name === exercise.name)
           return (
             <ExerciseCard
               key={i}
               exercise={exercise}
               previousSets={prevExercise?.sets ?? null}
               color={color}
-              onSetUpdate={(setIndex, field, value) =>
-                dispatch({ type: 'UPDATE_SET', date, exerciseIndex: i, setIndex, field, value })
-              }
+              onSetUpdate={(setIndex, field, value) => handleSetUpdate(i, setIndex, field, value)}
               onSetChecked={() => handleSetChecked(i)}
             />
           )

@@ -24,13 +24,12 @@ function playBeep() {
 
 export function unlockAudio() {
   if (!audioCtx) audioCtx = new AudioContext()
-  if (audioCtx.state === 'suspended') audioCtx.resume()
+  if (audioCtx.state === 'suspended') void audioCtx.resume()
 }
 
 export function useTimer() {
   const [remaining, setRemaining] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
-  const [duration, setDuration] = useState(0)
   const intervalRef = useRef<number | null>(null)
   const startTimeRef = useRef(0)
   const durationRef = useRef(0)
@@ -38,7 +37,6 @@ export function useTimer() {
   const start = useCallback((seconds: number) => {
     startTimeRef.current = Date.now()
     durationRef.current = seconds
-    setDuration(seconds)
     setRemaining(seconds)
     setIsRunning(true)
   }, [])
@@ -65,7 +63,7 @@ export function useTimer() {
     }
   }, [isRunning])
 
-  const progress = duration > 0 ? (duration - remaining) / duration : 0
+  const progress = durationRef.current > 0 ? (durationRef.current - remaining) / durationRef.current : 0
 
-  return { remaining, isRunning, duration, progress, start, stop }
+  return { remaining, isRunning, progress, start, stop }
 }

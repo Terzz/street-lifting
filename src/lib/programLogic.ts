@@ -2,8 +2,24 @@ import { WorkoutState, WorkoutSession, DayType, Phase, PRRecord, ExerciseEntry }
 import { PROGRAM, WARMUP } from '../constants/program'
 import { toLocalDateString } from './storage'
 
+/** Map for O(1) day template lookup */
+const DAY_MAP = new Map(PROGRAM.map((d) => [d.id, d]))
+
+/** Map for O(1) exercise template lookup by name */
+const EXERCISE_MAP = new Map(
+  PROGRAM.flatMap((d) => d.exercises.map((e) => [e.name, e]))
+)
+
+export function getDayTemplate(day: DayType) {
+  return DAY_MAP.get(day) ?? null
+}
+
+export function getExerciseTemplate(name: string) {
+  return EXERCISE_MAP.get(name) ?? null
+}
+
 export function getExercisesForDay(day: DayType, phase: Phase) {
-  const template = PROGRAM.find((d) => d.id === day)!
+  const template = DAY_MAP.get(day)!
   return template.exercises.filter((e) => !e.minPhase || e.minPhase <= phase)
 }
 

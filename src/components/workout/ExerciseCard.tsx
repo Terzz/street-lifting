@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import SetRow from './SetRow'
 import { ExerciseEntry, WorkoutSet } from '../../types'
-import { PROGRAM } from '../../constants/program'
+import { getExerciseTemplate } from '../../lib/programLogic'
 
 interface Props {
   exercise: ExerciseEntry
@@ -11,7 +11,7 @@ interface Props {
   color: string
 }
 
-export default function ExerciseCard({
+export default memo(function ExerciseCard({
   exercise,
   previousSets,
   onSetUpdate,
@@ -22,7 +22,7 @@ export default function ExerciseCard({
   const doneSets = exercise.sets.filter((s) => s.done).length
   const totalSets = exercise.sets.length
 
-  const template = PROGRAM.flatMap((d) => d.exercises).find((e) => e.name === exercise.name)
+  const template = getExerciseTemplate(exercise.name)
 
   return (
     <div className="bg-surface rounded-lg border border-border overflow-hidden">
@@ -83,4 +83,4 @@ export default function ExerciseCard({
       )}
     </div>
   )
-}
+})

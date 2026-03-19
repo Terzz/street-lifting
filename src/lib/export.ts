@@ -1,14 +1,18 @@
 import { WorkoutState } from '../types'
 import { initialState, toLocalDateString } from './storage'
 
-export function exportJSON(state: WorkoutState): void {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `street-lifting-backup-${toLocalDateString()}.json`
+  a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+export function exportJSON(state: WorkoutState): void {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+  triggerDownload(blob, `street-lifting-backup-${toLocalDateString()}.json`)
 }
 
 export function exportCSV(state: WorkoutState): void {
@@ -23,12 +27,7 @@ export function exportCSV(state: WorkoutState): void {
     }
   }
   const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `street-lifting-export-${toLocalDateString()}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  triggerDownload(blob, `street-lifting-export-${toLocalDateString()}.csv`)
 }
 
 export function parseImportedJSON(text: string): WorkoutState | null {

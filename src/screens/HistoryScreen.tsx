@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useWorkout } from '../context/WorkoutContext'
 import { PROGRAM } from '../constants/program'
 import { totalVolume, totalSets } from '../lib/programLogic'
@@ -9,35 +9,56 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'rec
 const allExercises = PROGRAM.flatMap((d) => d.exercises.map((e) => e.name))
 const uniqueExercises = [...new Set(allExercises)]
 
+const CHART_TICK = { fontSize: 10, fill: '#71717a' } as const
+const TOOLTIP_STYLE = {
+  backgroundColor: '#141418',
+  border: '1px solid #1e1e24',
+  borderRadius: 8,
+  fontSize: 12,
+} as const
+
 export default function HistoryScreen() {
   const { state } = useWorkout()
   const [selectedExercise, setSelectedExercise] = useState(uniqueExercises[0])
   const [view, setView] = useState<'exercises' | 'weeks'>('exercises')
 
-  // Build chart data for selected exercise
-  const chartData = Object.entries(state.workouts)
-    .filter(([, w]) => w.completed)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .flatMap(([date, workout]) => {
-      const exercise = workout.exercises.find((e) => e.name === selectedExercise)
-      if (!exercise) return []
-      const doneSets = exercise.sets.filter((s) => s.done)
-      if (doneSets.length === 0) return []
-      const maxWeight = Math.max(...doneSets.map((s) => s.weight))
-      const maxReps = Math.max(...doneSets.map((s) => s.reps))
-      return [{ date: date.slice(5), maxWeight, maxReps }]
-    })
+  // Shared: completed workouts sorted by date
+  const completedWorkouts = useMemo(
+    () =>
+      Object.entries(state.workouts)
+        .filter(([, w]) => w.completed)
+        .sort(([a], [b]) => a.localeCompare(b)),
+    [state.workouts]
+  )
 
-  // Build weekly data
-  const weeklyData = Object.entries(state.workouts)
-    .filter(([, w]) => w.completed)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, w]) => ({
-      date,
-      day: w.day,
-      volume: totalVolume(w),
-      sets: totalSets(w),
-    }))
+  // Build chart data for selected exercise
+  const chartData = useMemo(
+    () =>
+      completedWorkouts.flatMap(([date, workout]) => {
+        const exercise = workout.exercises.find((e) => e.name === selectedExercise)
+        if (!exercise) return []
+        const doneSets = exercise.sets.filter((s) => s.done)
+        if (doneSets.length === 0) return []
+        const maxWeight = Math.max(...doneSets.map((s) => s.weight))
+        const maxReps = Math.max(...doneSets.map((s) => s.reps))
+        return [{ date: date.slice(5), maxWeight, maxReps }]
+      }),
+    [completedWorkouts, selectedExercise]
+  )
+
+  // Build weekly data (reversed for display: newest first)
+  const weeklyData = useMemo(
+    () =>
+      [...completedWorkouts]
+        .reverse()
+        .map(([date, w]) => ({
+          date,
+          day: w.day,
+          volume: totalVolume(w),
+          sets: totalSets(w),
+        })),
+    [completedWorkouts]
+  )
 
   return (
     <div className="min-h-screen bg-bg pb-24">
@@ -83,16 +104,9 @@ export default function HistoryScreen() {
                 <div className="text-xs text-zinc-500 mb-3">Charge max (kg)</div>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={chartData}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#71717a' }} />
-                    <YAxis tick={{ fontSize: 10, fill: '#71717a' }} width={35} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#141418',
-                        border: '1px solid #1e1e24',
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
+                    <XAxis dataKey="date" tick={CHART_TICK} />
+                    <YAxis tick={CHART_TICK} width={35} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} />
                     <Line type="monotone" dataKey="maxWeight" stroke="#2dd4bf" strokeWidth={2} dot={{ fill: '#2dd4bf', r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -100,16 +114,9 @@ export default function HistoryScreen() {
                 <div className="text-xs text-zinc-500 mb-3 mt-6">Reps max</div>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={chartData}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#71717a' }} />
-                    <YAxis tick={{ fontSize: 10, fill: '#71717a' }} width={35} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#141418',
-                        border: '1px solid #1e1e24',
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
+                    <XAxis dataKey="date" tick={CHART_TICK} />
+                    <YAxis tick={CHART_TICK} width={35} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} />
                     <Line type="monotone" dataKey="maxReps" stroke="#fbbf24" strokeWidth={2} dot={{ fill: '#fbbf24', r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -143,7 +150,7 @@ export default function HistoryScreen() {
         {view === 'weeks' && (
           <div className="space-y-2">
             {weeklyData.length > 0 ? (
-              weeklyData.reverse().map((w, i) => (
+              weeklyData.map((w, i) => (
                 <div key={i} className="bg-surface rounded-lg border border-border p-4 flex items-center justify-between">
                   <div>
                     <div className="text-sm text-zinc-100">Jour {w.day}</div>

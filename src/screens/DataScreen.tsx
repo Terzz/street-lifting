@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
 import { useWorkout } from '../context/WorkoutContext'
 import { exportJSON, exportCSV, parseImportedJSON } from '../lib/export'
+import { STORAGE_KEY } from '../lib/storage'
 import Header from '../components/layout/Header'
 
 export default function DataScreen() {
   const { state, dispatch } = useWorkout()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [importStatus, setImportStatus] = useState<string | null>(null)
+  const [importStatus, setImportStatus] = useState<{ ok: boolean; message: string } | null>(null)
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -17,13 +18,13 @@ export default function DataScreen() {
       const data = parseImportedJSON(text)
       if (data) {
         dispatch({ type: 'IMPORT_DATA', data })
-        setImportStatus('Donnees importees avec succes')
+        setImportStatus({ ok: true, message: 'Donnees importees avec succes' })
       } else {
-        setImportStatus('Erreur : fichier invalide')
+        setImportStatus({ ok: false, message: 'Erreur : fichier invalide' })
       }
     }
     reader.onerror = () => {
-      setImportStatus('Erreur : impossible de lire le fichier')
+      setImportStatus({ ok: false, message: 'Erreur : impossible de lire le fichier' })
     }
     reader.readAsText(file)
     e.target.value = ''
@@ -94,8 +95,8 @@ export default function DataScreen() {
             className="hidden"
           />
           {importStatus && (
-            <p className={`text-xs ${importStatus.includes('succes') ? 'text-pull' : 'text-red-400'}`}>
-              {importStatus}
+            <p className={`text-xs ${importStatus.ok ? 'text-pull' : 'text-red-400'}`}>
+              {importStatus.message}
             </p>
           )}
         </div>
@@ -109,7 +110,7 @@ export default function DataScreen() {
           <button
             onClick={() => {
               if (confirm('Etes-vous sur ? Toutes les donnees seront perdues.')) {
-                localStorage.removeItem('street-lifting-data')
+                localStorage.removeItem(STORAGE_KEY)
                 window.location.reload()
               }
             }}

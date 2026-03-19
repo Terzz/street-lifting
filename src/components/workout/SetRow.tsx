@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import NumberInput from '../common/NumberInput'
 import { WorkoutSet } from '../../types'
 
@@ -9,7 +10,7 @@ interface Props {
   onChecked: () => void
 }
 
-export default function SetRow({ index, set, previousSet, onUpdate, onChecked }: Props) {
+export default memo(function SetRow({ index, set, previousSet, onUpdate, onChecked }: Props) {
   const handleDone = () => {
     const newDone = !set.done
     onUpdate('done', newDone)
@@ -53,4 +54,4 @@ export default function SetRow({ index, set, previousSet, onUpdate, onChecked }:
       </button>
     </div>
   )
-}
+})

@@ -1,6 +1,7 @@
+import { useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkout } from '../context/WorkoutContext'
-import { PROGRAM } from '../constants/program'
+import { getDayTemplate } from '../lib/programLogic'
 import { DayType } from '../types'
 import DayCard from '../components/home/DayCard'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
@@ -15,30 +16,35 @@ export default function HomeScreen() {
 
   const today = toLocalDateString()
 
-  // Determine which days are done this week (simple: check last 7 days)
-  const last7Days: string[] = []
-  for (let i = 0; i < 7; i++) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    last7Days.push(toLocalDateString(d))
-  }
-
-  const doneDays = new Set(
-    last7Days
-      .filter((d) => state.workouts[d]?.completed)
-      .map((d) => state.workouts[d].day)
-  )
+  // Determine which days are done this week (check last 7 days)
+  const doneDays = useMemo(() => {
+    const last7Days: string[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(toLocalDateString(d))
+    }
+    return new Set(
+      last7Days
+        .filter((d) => state.workouts[d]?.completed)
+        .map((d) => state.workouts[d].day)
+    )
+  }, [state.workouts, today])
 
   // Find which day to suggest today
   const nextDay = DAY_ORDER.find((d) => !doneDays.has(d)) ?? 'A'
+  const nextDayTemplate = getDayTemplate(nextDay)
 
-  const handleStartDay = (day: DayType) => {
-    const existing = state.workouts[today]
-    if (!existing || (existing.completed && existing.day !== day)) {
-      dispatch({ type: 'START_WORKOUT', day, date: today })
-    }
-    navigate(`/workout/${today}`)
-  }
+  const handleStartDay = useCallback(
+    (day: DayType) => {
+      const existing = state.workouts[today]
+      if (!existing || (existing.completed && existing.day !== day)) {
+        dispatch({ type: 'START_WORKOUT', day, date: today })
+      }
+      navigate(`/workout/${today}`)
+    },
+    [state.workouts, today, dispatch, navigate]
+  )
 
   const getDayStatus = (day: DayType): 'done' | 'today' | 'todo' => {
     if (doneDays.has(day)) return 'done'
@@ -68,17 +74,14 @@ export default function HomeScreen() {
 
       <div className="max-w-lg mx-auto px-4 space-y-4">
         {/* Quick start */}
-        {!state.workouts[today]?.completed && (() => {
-          const nextDayTemplate = PROGRAM.find((d) => d.id === nextDay)
-          return (
-            <button
-              onClick={() => handleStartDay(nextDay)}
-              className="w-full py-4 rounded-lg bg-pull text-bg text-sm font-semibold active:bg-pull/80"
-            >
-              Commencer {nextDayTemplate?.name} — {nextDayTemplate?.label}
-            </button>
-          )
-        })()}
+        {!state.workouts[today]?.completed && nextDayTemplate && (
+          <button
+            onClick={() => handleStartDay(nextDay)}
+            className="w-full py-4 rounded-lg bg-pull text-bg text-sm font-semibold active:bg-pull/80"
+          >
+            Commencer {nextDayTemplate.name} — {nextDayTemplate.label}
+          </button>
+        )}
 
         {state.workouts[today]?.completed && (
           <div className="py-4 text-center text-pull text-sm font-semibold">

@@ -1,6 +1,6 @@
 import { WorkoutState } from '../types'
 
-const STORAGE_KEY = 'street-lifting-data'
+export const STORAGE_KEY = 'street-lifting-data'
 
 /** Returns local date as YYYY-MM-DD (avoids UTC offset bugs from toISOString) */
 export function toLocalDateString(date: Date = new Date()): string {

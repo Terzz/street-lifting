@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useWorkout } from '../context/WorkoutContext'
-import { PROGRAM } from '../constants/program'
-import { totalVolume, totalSets } from '../lib/programLogic'
+import { totalVolume, totalSets, getDayTemplate } from '../lib/programLogic'
 import Badge from '../components/common/Badge'
 import Header from '../components/layout/Header'
 
@@ -11,7 +10,7 @@ export default function WorkoutSummary() {
   const { state } = useWorkout()
 
   const workout = date ? state.workouts[date] : null
-  const dayTemplate = workout ? PROGRAM.find((d) => d.id === workout.day) : null
+  const dayTemplate = workout ? getDayTemplate(workout.day) : null
 
   if (!date || !workout || !dayTemplate) {
     return (
