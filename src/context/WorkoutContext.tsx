@@ -16,7 +16,7 @@ function workoutReducer(state: WorkoutState, action: Action): WorkoutState {
   switch (action.type) {
     case 'START_WORKOUT': {
       const existing = state.workouts[action.date]
-      if (existing && (!existing.completed || existing.day === action.day)) return state
+      if (existing && existing.day === action.day) return state
       const session = createWorkoutSession(action.day, state.currentPhase)
       return {
         ...state,
